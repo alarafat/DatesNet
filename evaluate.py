@@ -44,7 +44,7 @@ def plot_confusion_matrix(predictions, targets, class_names):
     plt.title("Confusion Matrix")
     plt.ylabel("Actual")
     plt.xlabel("Predicted")
-    plt.savefig(os.path.join(cfg.output_dir, r'confusion_matrix_prob.png'))
+    plt.savefig(os.path.join(cfg.output_dir, r'confusion_matrix.png'))
     plt.show(block=True)
 
 
@@ -53,7 +53,7 @@ def dump_into_file(kl_div, accuracy, precision, recall, f1, class_names, file_pa
         f.write("Evaluation Metrics:\n")
         print(f"KL Divergence: {kl_div:.5f}\n")
         f.write(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
-        f.write(f"{'Class':<20}{'Precision':<11}{'Recall':<11}{'F1-Score':<11}\n")
+        f.write(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}\n")
         for i, class_name in enumerate(class_names):
             f.write(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}\n")
 
@@ -111,7 +111,7 @@ def test():
             print("Evaluation Metrics:")
             print(f"KL Divergence: {kl_div:.5f}\n")
             print(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
-            print(f"{'Class':<20}{'Precision':<11}{'Recall':<11}{'F1-Score':<11}")
+            print(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}")
             for i, class_name in enumerate(class_names):
                 print(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}")
 

@@ -6,4 +6,5 @@ pillow
 tqdm
 seaborn
 torchinfo
+jupyter
 einops

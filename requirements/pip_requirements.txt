@@ -1,0 +1,9 @@
+sklearn
+matplotlib
+pandas
+opencv-python
+pillow
+tqdm
+seaborn
+torchinfo
+einops

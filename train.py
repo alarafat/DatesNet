@@ -9,9 +9,9 @@ import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-# from lib.datesnet import DatesNet
+from lib.datesnet import DatesNet
 # from lib.datesnet_mlp import DatesNet
-from lib.datesnet_vgg import DatesNet
+# from lib.datesnet_vgg import DatesNet
 
 from config.datesnet_config import Config as cfg
 from data.data_processing import DataProcessing

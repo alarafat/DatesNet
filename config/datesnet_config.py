@@ -65,6 +65,6 @@ class Config:
 
     class TestConfig:
         checkpoint_name: str = r'checkpoints/datesnet_model_unet.pth'
-        use_single_image: bool = False
+        use_single_image: bool = True
         image_file_name: str = r'demo/image_1.png'
         class_names: list = list(['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt'])

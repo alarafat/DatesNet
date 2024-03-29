@@ -23,20 +23,20 @@ class DatesNet(nn.Module):
             nn.Sequential(
                 nn.Conv2d(in_channels=cfg.ModelConfig.in_channels, out_channels=hidden_channels[0], kernel_size=3, padding=1),  # (b, 64, h, w)
                 ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h, w)
-                ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h, w)
+                # ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h, w)
             ),
 
             nn.Sequential(
                 nn.Conv2d(in_channels=hidden_channels[0], out_channels=hidden_channels[0], kernel_size=3, stride=2, padding=1),  # (b, 64, h/2, w/2)
                 ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[1]),  # -> (b, 128, h/2, w/2)
-                ResidualBlock(in_channels=hidden_channels[1], out_channels=hidden_channels[1]),  # (b, 128, h/2, w/2)
+                # ResidualBlock(in_channels=hidden_channels[1], out_channels=hidden_channels[1]),  # (b, 128, h/2, w/2)
             ),
 
             nn.Sequential(
                 nn.Conv2d(in_channels=hidden_channels[1], out_channels=hidden_channels[1], kernel_size=3, stride=2, padding=1),  # (b, 128, h/4, w/4)
                 ResidualBlock(in_channels=hidden_channels[1], out_channels=hidden_channels[2]),  # -> (b, 256, h/4, w/4)
                 AttentionBlock(hidden_channels[2]),
-                ResidualBlock(in_channels=hidden_channels[2], out_channels=hidden_channels[2]),  # (b, 256, h/4, w/4)
+                # ResidualBlock(in_channels=hidden_channels[2], out_channels=hidden_channels[2]),  # (b, 256, h/4, w/4)
             ),
 
             # nn.Sequential(
@@ -56,7 +56,7 @@ class DatesNet(nn.Module):
             nn.Sequential(
                 ResidualBlock(in_channels=decoder_in_channels[0], out_channels=hidden_channels[2]),  # (b, 512, h/4, w/4) -> (b, 256, h/4, w/4)
                 AttentionBlock(hidden_channels[2]),
-                ResidualBlock(in_channels=hidden_channels[2], out_channels=hidden_channels[2]),  # (b, 256, h/4, w/4)
+                # ResidualBlock(in_channels=hidden_channels[2], out_channels=hidden_channels[2]),  # (b, 256, h/4, w/4)
                 ResidualBlock(in_channels=hidden_channels[2], out_channels=hidden_channels[1]),  # (b, 128, h/4, w/4)
                 Upsample(hidden_channels[1]),  # (b, 128, h/2, w/2)
             ),
@@ -64,13 +64,13 @@ class DatesNet(nn.Module):
             nn.Sequential(
                 ResidualBlock(in_channels=decoder_in_channels[1], out_channels=hidden_channels[1]),  # (b, 256, h/4, w/4) -> (b, 128, h/4, w/4)
                 ResidualBlock(in_channels=hidden_channels[1], out_channels=hidden_channels[0]),  # (b, 128, h/2, w/2) -> (b, 64, h/2, w/2)
-                ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
+                # ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
                 Upsample(hidden_channels[0]),  # (b, 64, h, w)
             ),
 
             nn.Sequential(
                 ResidualBlock(in_channels=decoder_in_channels[2], out_channels=hidden_channels[0]),  # (b, 128, h/4, w/4) -> (b, 64, h/4, w/4)
-                ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
+                # ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
                 ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
             ),
         ])
@@ -110,6 +110,7 @@ class DatesNet(nn.Module):
             x = torch.cat((x, skips.pop()), dim=1)
             x = layers(x)
 
+        # We are using log-softmax since we are KLDiv Loss, otherwise use softmax if we use cross-entropy
         out = F.log_softmax(self.head(x), dim=1)
 
         return out

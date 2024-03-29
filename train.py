@@ -10,10 +10,12 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 # from lib.datesnet import DatesNet
-from lib.datesnet_mlp import DatesNet
+# from lib.datesnet_mlp import DatesNet
+from lib.datesnet_vgg import DatesNet
 from config.datesnet_config import Config as cfg
 from data.data_processing import DataProcessing
 from data.dataset_loader import FERPlusDatasetLoader
+from utils.evaluation_metrics import compute_accuracy
 from utils.dnn_utils import get_optimizer, get_lr_scheduler, EvaluationMetric
 
 
@@ -21,18 +23,16 @@ def train(model, dataset_loader, loss_fn, optimizer, epoch, writer):
     losses = EvaluationMetric()
 
     model.train()
-    for batch_index, (input_data, target) in tqdm(enumerate(dataset_loader), total=len(dataset_loader)):
+    for input_data, targets in tqdm(dataset_loader, total=len(dataset_loader)):
         gc.collect()
         torch.cuda.empty_cache()
 
         if cfg.device == 'cuda':
-            target = target.cuda(non_blocking=True)
+            targets = targets.cuda(non_blocking=True)
 
         log_prob = model(input_data)
 
-        loss = loss_fn(log_prob, target)
-
-
+        loss = loss_fn(log_prob, targets)
 
         # Store the losses
         losses.update(loss.item(), cfg.TrainConfig.batch_size)
@@ -44,32 +44,38 @@ def train(model, dataset_loader, loss_fn, optimizer, epoch, writer):
 
     # Add loss to Tensorboard writer
     writer.add_scalar("Loss/train", losses.value, epoch)
-    print('Training epoch {}: loss {:.4f}'.format(epoch, losses.value))
+    print('\nTraining epoch {}: loss {:.4f}\n'.format(epoch, losses.value))
 
 
 def validation(model, dataset_loader, loss_fn, epoch, writer):
     losses = EvaluationMetric()
+    accuracy = EvaluationMetric()
 
     model.eval()
 
     with torch.no_grad():
-        for batch_index, (input_data, target) in tqdm(enumerate(dataset_loader), total=len(dataset_loader)):
+        for input_data, targets in tqdm(dataset_loader, total=len(dataset_loader)):
             gc.collect()
             torch.cuda.empty_cache()
 
             if cfg.device == 'cuda':
-                target = target.cuda(non_blocking=True)
+                targets = targets.cuda(non_blocking=True)
 
-            output = model(input_data)
+            log_prob = model(input_data)
 
-            loss = loss_fn(output, target)
+            # Compute accuracy
+            accu = compute_accuracy(predictions=log_prob, targets=targets)
+            accuracy.update(accu, cfg.ValidConfig.batch_size)
 
-            losses.update(loss.item(), cfg.TrainConfig.batch_size)
+            loss = loss_fn(log_prob, targets)
+
+            losses.update(loss.item(), cfg.ValidConfig.batch_size)
 
     # Add loss and nme to Tensorboard writer
     writer.add_scalar("Loss/validation", losses.average, epoch)
+    writer.add_scalar("Accuracy/validation", accuracy.average, epoch)
 
-    print('Validation epoch {}: loss {:.4f}'.format(epoch, losses.average))
+    print('\nValidation epoch {}: loss {:.4f}, accuracy: {:.4f}\n'.format(epoch, losses.average, accuracy.average))
 
     return losses.average
 
@@ -162,16 +168,6 @@ def main():
                                            num_workers=cfg.ValidConfig.workers,
                                            pin_memory=cfg.ValidConfig.pin_memory)
 
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-    # for batch_idx, (inputs, _) in enumerate(validation_dataset_loader):
-    #     fig = plt.figure(figsize=(14, 7))
-    #     for i in range(1):
-    #         ax = fig.add_subplot(2, 4, i + 1, xticks=[], yticks=[])
-    #         plt.imshow((inputs[i].numpy().transpose(1, 2, 0) * 255).astype(np.uint8))
-    #     break
-    # plt.show(block=True)
-
     # Run training and validation for all the epochs
     for curr_epoch_idx in tqdm(range(cfg.TrainConfig.number_epochs)):
         train(model=model, dataset_loader=train_dataset_loader, optimizer=optimizer, loss_fn=loss_fn, epoch=curr_epoch_idx, writer=writer)
@@ -196,7 +192,7 @@ def main():
             best_model_state_dict = states
 
     if best_model_state_dict:
-        final_output_model_file_name = os.path.join(cfg.output_dir, 'datesnet_model' + '.pth')
+        final_output_model_file_name = os.path.join(cfg.checkpoint_dir, 'datesnet_model' + '.pth')
         torch.save(best_model_state_dict, final_output_model_file_name)
 
     writer.flush()
@@ -204,42 +200,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # import cv2
-    # import numpy as np
-    # import pandas as pd
-    # from tqdm import tqdm
-    #
-    # fer = pd.read_csv(r'D:\dataset\face\FER+\fer2013.csv')
-    # fer_plus = pd.read_csv(r'D:\dataset\face\FER+\fer2013new.csv')
-    #
-    # images = list()
-    # labels = list()
-    # classes = fer_plus.columns[2:-1].tolist()
-    # data = fer_plus[fer_plus["Usage"] == "Training"]
-    # for idx, (image_name, image_data) in tqdm(enumerate(zip(data['Image name'], fer['pixels'])), total=len(data)):
-    #     if pd.isna(image_name):
-    #         continue
-    #
-    #     image_data = np.fromstring(image_data, dtype=np.uint8, sep=' ').reshape(48, 48)
-    #     cv2.namedWindow('test_image', cv2.WINDOW_NORMAL)
-    #     cv2.imshow('test_image', image_data)
-    #     cv2.waitKey(0)
-    #     images.append(image_data)
-    #     labels.append([fer_plus.loc[idx, each_class] for each_class in classes])
-
-    # target = np.array([fer_plus.loc[idx, each_class] / 10.0 for each_class in classes])
-
-    # idx = np.random.choice(len(target), p=target)
-    # new_target_old = np.zeros_like(target)
-    # new_target_old[idx] = 1.0
-    #
-    # new_target = np.array(target)
-    # new_target[new_target > 0] = 1.0
-    # epsilon = 0.001     # add small epsilon in order to avoid ill-conditioned computation
-    # alpha = 0.001
-    # res = (1 - alpha) * target + alpha * np.ones_like(target)
-    #
-    # images_ar = np.array(images)
-    # print('checkpoint')
-
     main()

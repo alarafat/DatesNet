@@ -3,3 +3,7 @@
 /logdir/*
 /output/*
 /checkpoints/*
+/lib/__pycache__/*
+/data/__pycache__/*
+/config/__pacache__/*
+/utils/__pycache__/*

@@ -6,41 +6,18 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
-
 from config.datesnet_config import Config as cfg
-
-from lib.datesnet_mlp import DatesNet
+# from lib.datesnet import DatesNet
+# from lib.datesnet_mlp import DatesNet
+from lib.datesnet_vgg import DatesNet
 from data.data_processing import DataProcessing
 from data.dataset_loader import FERPlusDatasetLoader
+from utils.evaluation_metrics import kl_divergence, compute_accuracy, compute_metrics, compute_confusion_matrix
 
 
-def prob2class(predictions, targets):
-    pred_prob = torch.exp(predictions)
-    pred_probs, pred_classes = torch.max(pred_prob, dim=1)
-    gt_probs, gt_classes = torch.max(targets, dim=1)
-    return pred_classes.cpu().numpy(), gt_classes.cpu().numpy()
-
-
-def kl_divergence(predictions, targets):
-    criterion = torch.nn.KLDivLoss(reduction='batchmean')
-    kl_div = criterion(predictions, targets).item()  # Ensure predictions are in log form
-    print(f"KL Divergence: {kl_div}")
-    return kl_div
-
-
-def compute_metrics(predictions, targets):
-    pred_classes, gt_classes = prob2class(predictions=predictions, targets=targets)
-    accuracy = accuracy_score(gt_classes, pred_classes)
-    precision, recall, f1, _ = precision_recall_fscore_support(gt_classes, pred_classes, average=None)
-    return accuracy, precision, recall, f1
-
-
-def plot_confusion_matrix(predictions, targets, class_names):
-    pred_classes, gt_classes = prob2class(predictions=predictions, targets=targets)
-    cm = confusion_matrix(gt_classes, pred_classes, normalize='true')
+def plot_confusion_matrix(confusion_mat, class_names):
     plt.figure(figsize=(10, 10))
-    sns.heatmap(cm.astype(float), annot=True, fmt=".2%", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+    sns.heatmap(confusion_mat.astype(float), annot=True, fmt=".2%", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
     plt.title("Confusion Matrix")
     plt.ylabel("Actual")
     plt.xlabel("Predicted")
@@ -102,10 +79,12 @@ def test():
             kl_div = kl_divergence(predictions=predictions, targets=targets)
 
             # Compute accuracy score, precision, F1, recall scores
-            accuracy, precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
+            accuracy = compute_accuracy(predictions=predictions, targets=targets)
+            precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
 
-            # Plot confusion matrix
-            plot_confusion_matrix(predictions=predictions, targets=targets, class_names=class_names)
+            # Compute confusion matrix
+            conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
+            plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
 
             # Print evaluation metrics
             print("Evaluation Metrics:")

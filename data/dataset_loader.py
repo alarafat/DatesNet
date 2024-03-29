@@ -11,6 +11,7 @@ import torch.utils.data as data
 class FERPlusDatasetLoader(data.Dataset):
     def __init__(self, cfg, dataset_name: str, transforms=None):
         assert dataset_name in ['train', 'test', 'val'], "Dataset name can be in [train/test/val]"
+        self.cfg = cfg
         dataset_name_pairs = dict(train='Training',
                                   test='PublicTest',
                                   val='PrivateTest')
@@ -31,7 +32,7 @@ class FERPlusDatasetLoader(data.Dataset):
 
         curr_fer_plus = self.fer_plus[self.fer_plus["Usage"] == self.dataset_name]
         for idx, (image_name, image_data) in tqdm(enumerate(zip(curr_fer_plus['Image name'], self.fer['pixels'])), total=len(curr_fer_plus)):
-            if pd.isna(image_name):
+            if pd.isna(image_name) or self.fer_plus.iloc[idx][2: 2 + self.cfg.ModelConfig.n_classes].sum() == 0:
                 continue
             images.append(np.fromstring(image_data, dtype=np.uint8, sep=' ').reshape(self.image_shape))
             labels.append(self.encode_labels(np.array([self.fer_plus.loc[idx, each_class] for each_class in self.classes_name])))

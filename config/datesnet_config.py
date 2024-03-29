@@ -64,4 +64,4 @@ class Config:
         pin_memory: bool = True
 
     class TestConfig:
-        checkpoint_name: str = r'checkpoints/datesnet_model_cont.pth'
+        checkpoint_name: str = r'checkpoints/datesnet_model.pth'

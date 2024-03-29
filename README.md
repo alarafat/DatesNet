@@ -1,5 +1,4 @@
 # DatesNet: Facial Emotion Recognition 
----
 Implementation of a Facial Emotion Recognition on FER+ dataset. The implementation contains 3 separate model architectures. 
 - Simplest of all MLP architecture with a couple of Convolution layers with Max pooling.
 - Shortened, customized VGGNet architecture with much fewer layers
@@ -8,7 +7,6 @@ Implementation of a Facial Emotion Recognition on FER+ dataset. The implementati
 **Link to FER+ dataset:** [FER+](https://github.com/microsoft/FERPlus/tree/master)
 
 ## Training
----
 The training code need the proper configuration set in the ***config/datesnet_config.py***. The 
 model uses PyTorch. To create the environment, run
 ````commandline

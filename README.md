@@ -31,8 +31,6 @@ The ***datesnet_model.pth*** is the final mode saved when the best validation lo
 | Architecture             | File                                                     | Confusion Matrix                                         |
 |--------------------------|----------------------------------------------------------|----------------------------------------------------------|
 | DatesNet UNet [8classes] | [link](./checkpoints/datesnet_model_unet.pth)            | ![ref conf mat](./output/confusion_matrix_unet_8cls.png) |
-| DatesNet VGG [8 classes] | [link](./checkpoints/datesnet_model_vgg.pth)             | ![ref conf mat](./output/confusion_matrix_vgg_8cls.png)  |
-| DatesNet MLP [8 classes] | [link](./checkpoints/datesnet_model_mlp.pth)             | ![ref conf mat](./output/confusion_matrix_mlp_8cls.png)  |
  | Reference Model on FER+  | [link](https://github.com/microsoft/FERPlus/tree/master) | ![ref conf mat](./output/ref_conf_mat.png)               |      
 
 ## Evaluation

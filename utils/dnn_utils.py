@@ -3,6 +3,15 @@ import torch.optim as optim
 
 
 class EvaluationMetric(object):
+    """
+    A utility class for tracking and updating evaluation metrics during training or testing of machine learning models.
+
+    The class is designed to track and compute statistics, such as the average or mean, of a
+    particular metric over time. It can be used during the training or evaluation of machine learning models to
+    monitor performance metrics like accuracy, loss, precision, or recall across iterations or epochs. The class
+    provides mechanisms to update these metrics with new values as they are computed, maintain a sum of all values
+    for the metric, and calculate the overall average.
+    """
     def __init__(self):
         self.value = 0
         self.average = 0
@@ -24,6 +33,11 @@ class EvaluationMetric(object):
 
 
 def get_optimizer(model, cfg):
+    """
+    Configures and returns an optimizer for the model based on the default configuration
+
+    Supported optimizers: SGD, Adam, RMSprop, AdamW.
+    """
     assert cfg.TrainConfig.optimizer_name in ['sgd', 'adam', 'rmsprop', 'adamw'], "Optimizer option can be only between [SGD/Adam/RMSProp/AdamW]"
 
     optim_name = cfg.TrainConfig.optimizer_name.lower()
@@ -60,6 +74,11 @@ def get_optimizer(model, cfg):
 
 
 def get_lr_scheduler(cfg, optimizer: torch.optim, last_epoch: int):
+    """
+    Configures and returns a learning rate scheduler based on the default configuration
+
+    Supported LR schedulers: MultiStepLR, StepLR, CosineAnnealingLR.
+    """
     assert cfg.TrainConfig.lr_scheduler_name in ['multistep', 'steplr', 'cosine'], "LR Scheduler option can be only between [multistep/steplr/cosine]"
 
     lr_scheduler = cfg.TrainConfig.lr_scheduler_name.lower()

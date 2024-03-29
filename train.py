@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 # from lib.datesnet import DatesNet
 # from lib.datesnet_mlp import DatesNet
 from lib.datesnet_vgg import DatesNet
+
 from config.datesnet_config import Config as cfg
 from data.data_processing import DataProcessing
 from data.dataset_loader import FERPlusDatasetLoader
@@ -20,18 +21,23 @@ from utils.dnn_utils import get_optimizer, get_lr_scheduler, EvaluationMetric
 
 
 def train(model, dataset_loader, loss_fn, optimizer, epoch, writer):
-    losses = EvaluationMetric()
+    """
+    Training Loop, running over batches and log the loss
+    """
+    losses = EvaluationMetric()  # EvaluationMetric is a util function to average loss values.
 
     model.train()
     for input_data, targets in tqdm(dataset_loader, total=len(dataset_loader)):
+        # Free up memory that is not in use anymore and clean torch cuda cache
         gc.collect()
         torch.cuda.empty_cache()
 
         if cfg.device == 'cuda':
-            targets = targets.cuda(non_blocking=True)
+            targets = targets.cuda(non_blocking=True)   # Load the targets probabilities to the device
 
         log_prob = model(input_data)
 
+        # Compute loss
         loss = loss_fn(log_prob, targets)
 
         # Store the losses
@@ -43,23 +49,30 @@ def train(model, dataset_loader, loss_fn, optimizer, epoch, writer):
         optimizer.step()
 
     # Add loss to Tensorboard writer
+    # Logging loss for a single epoch rather than logging it over each batch
     writer.add_scalar("Loss/train", losses.value, epoch)
     print('\nTraining epoch {}: loss {:.4f}\n'.format(epoch, losses.value))
 
 
 def validation(model, dataset_loader, loss_fn, epoch, writer):
+    """
+    Validation loop, model in evaluation mode, log validation loss and accuracy of the model
+    """
+    # EvaluationMetric is initialized for loss and accuracy to log average loss values and accuracy.
     losses = EvaluationMetric()
     accuracy = EvaluationMetric()
 
-    model.eval()
+    model.eval()    # We need to make sure the model is in eval mode to not load dropout or batch norm layers
 
+    # Run the validation loop with no_grad to disable gradient calculation
     with torch.no_grad():
         for input_data, targets in tqdm(dataset_loader, total=len(dataset_loader)):
+            # Free up memory that is not in use anymore and clean torch cuda cache
             gc.collect()
             torch.cuda.empty_cache()
 
             if cfg.device == 'cuda':
-                targets = targets.cuda(non_blocking=True)
+                targets = targets.cuda(non_blocking=True)   # Load the targets probabilities to the device
 
             log_prob = model(input_data)
 
@@ -67,11 +80,14 @@ def validation(model, dataset_loader, loss_fn, epoch, writer):
             accu = compute_accuracy(predictions=log_prob, targets=targets)
             accuracy.update(accu, cfg.ValidConfig.batch_size)
 
+            # Compute loss
             loss = loss_fn(log_prob, targets)
 
+            # Store the losses
             losses.update(loss.item(), cfg.ValidConfig.batch_size)
 
-    # Add loss and nme to Tensorboard writer
+    # Add loss and accuracy to Tensorboard writer
+    # Logging loss and accuracy for a single epoch rather than logging it over each batch
     writer.add_scalar("Loss/validation", losses.average, epoch)
     writer.add_scalar("Accuracy/validation", accuracy.average, epoch)
 
@@ -96,10 +112,11 @@ def main():
     # load the model
     model = DatesNet(cfg=cfg)
 
-    batch_size = 1
-    summary(model, input_size=(batch_size, 3, cfg.DatasetConfig.image_shape[0], cfg.DatasetConfig.image_shape[1]))
+    # ================= Write summary of the model and count model parameters ====================
+    summary(model, input_size=(1, 3, cfg.DatasetConfig.image_shape[0], cfg.DatasetConfig.image_shape[1]))
     print('Model parameters: %.2fM' % (sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6))
 
+    # Configure CUDA settings for the training
     if 'cuda' in cfg.device:
         cudnn.benchmark = cfg.TrainConfig.is_cudnn_benchmark_enabled
         cudnn.deterministic = cfg.TrainConfig.is_cudnn_deterministic
@@ -108,9 +125,9 @@ def main():
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
-        model = nn.DataParallel(model, device_ids=gpus).cuda()
+        model = nn.DataParallel(model, device_ids=gpus).cuda()      # Parallelize the model, data, computation, etc. over multiple GPUs
 
-    # Loss function
+    # Initialize loss function
     # loss_fn = nn.CrossEntropyLoss(reduction='none')
     loss_fn = nn.KLDivLoss(reduction='batchmean')
 
@@ -125,33 +142,35 @@ def main():
 
     # Resume training
     if cfg.TrainConfig.resume_training:
-        device = torch.device(cfg.device)
+        model_file_name = os.path.join(cfg.checkpoint_dir, 'datesnet_model_cont.pth')
 
-        if len(os.listdir(cfg.checkpoint_dir)) != 0:
-            last_epoch = max([int(os.path.splitext(x)[0].split('_')[-1]) for x in os.listdir(cfg.checkpoint_dir) if 'model' in x])
-            model_file_name = os.path.join(cfg.checkpoint_dir, 'model_' + str(last_epoch) + '.pth')
-
-            checkpoint = torch.load(model_file_name, map_location=device)
-
+        if os.path.exists(model_file_name):
+            # Load the model state_dict with the saved last_epoch and best_val_loss to continue
+            checkpoint = torch.load(model_file_name, map_location=cfg.device)
             state_dict = checkpoint.get('state_dict')
+            last_epoch = checkpoint['last_epoch']
+            best_val_loss = checkpoint['best_val_loss']
 
+            # Load the saved model weights to the device
             if cfg.device == 'cuda':
                 model.module.load_state_dict(state_dict=state_dict)
-                model.to(device=device)
+                model.to(device=cfg.device)
             else:
                 model.load_state_dict(state_dict=state_dict)
 
             optimizer.load_state_dict(checkpoint.get('optimizer'))
 
-            print("=> loaded checkpoint (epoch {})".format(last_epoch))
+            print("=> loaded checkpoint at (epoch {})".format(last_epoch))
         else:
-            print("=> no checkpoint found")
+            raise FileNotFoundError("Checkpoint file not found")
 
-    # loading training dataset
+    # Do pre-processing over the training dataset, compute the training db mean and std, and get the training augmentation transforms
     data_processor = DataProcessing(cfg)
     mean, std = data_processor.compute_db_mean_std()
     print("mean: {}, std: {}".format(mean, std))
     aug_transforms = data_processor.get_online_aug_transform(mean=mean, std=std)
+
+    # loading training dataset
     train_dataset = FERPlusDatasetLoader(cfg=cfg, dataset_name='train', transforms=aug_transforms)
     train_dataset_loader = DataLoader(train_dataset,
                                       batch_size=cfg.TrainConfig.batch_size,
@@ -187,14 +206,17 @@ def main():
         if (curr_epoch_idx + 1) % 5 == 0 or (curr_epoch_idx + 1) == cfg.TrainConfig.number_epochs:
             torch.save(states, checkpoint_model_file_name)
 
+        # Compute the best validation loss and save the state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model_state_dict = states
 
+    # Save the final model with the best validation loss
     if best_model_state_dict:
         final_output_model_file_name = os.path.join(cfg.checkpoint_dir, 'datesnet_model' + '.pth')
         torch.save(best_model_state_dict, final_output_model_file_name)
 
+    # Clean and close Tensorboard writer
     writer.flush()
     writer.close()
 

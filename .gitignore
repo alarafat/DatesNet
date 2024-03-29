@@ -1,8 +1,7 @@
 /.idea/*
 /datasets/*
 /logdir/*
-/output/*
-/checkpoints/*
+/eval_result/*
 /lib/__pycache__/*
 /data/__pycache__/*
 /config/__pacache__/*

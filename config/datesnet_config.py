@@ -21,7 +21,7 @@ class Config:
 
     class ModelConfig:
         in_channels: int = 3
-        n_classes: int = 10      # number of output classes (neutral, happiness, surprise, sadness, anger, disgust, fear, contempt, unknown, NF[Not face])
+        n_classes: int = 8      # number of output classes (neutral, happiness, surprise, sadness, anger, disgust, fear, contempt, unknown, NF[Not face])
         n_groups_gm: int = 16
         start_hidden_channels: int = 64,
         n_hidden_expansion: int = 3
@@ -35,7 +35,7 @@ class Config:
         is_cudnn_benchmark_enabled: bool = True
         is_cudnn_deterministic: bool = False
         gpus: tuple = (0,)
-        batch_size: int = 32
+        batch_size: int = 64
         shuffle: bool = True
         workers: int = 16
         pin_memory: bool = True
@@ -64,4 +64,7 @@ class Config:
         pin_memory: bool = True
 
     class TestConfig:
-        checkpoint_name: str = r'checkpoints/datesnet_model.pth'
+        checkpoint_name: str = r'checkpoints/datesnet_model_unet.pth'
+        use_single_image: bool = False
+        image_file_name: str = r'demo/image_1.png'
+        class_names: list = list(['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt'])

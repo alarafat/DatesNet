@@ -82,12 +82,13 @@ def test():
     std = list([0.2918, 0.2918, 0.2918])
 
     if cfg.TestConfig.use_single_image:
-        assert len(cfg.TestConfig.class_names) == 0, "You need to se the class names if you want to use a single image"
+        assert len(cfg.TestConfig.class_names) != 0, "You need to use the class names if you want to use a single image"
         class_names = cfg.TestConfig.class_names
         gray_image = cv2.imread(cfg.TestConfig.image_file_name, cv2.IMREAD_GRAYSCALE)
 
-        gray_image = np.expand_dims(gray_image, axis=0)  # Add batch dimension
-        rgb_image = np.expand_dims(gray_image, axis=0)  # Add channel dimension
+        # gray_image_ = np.expand_dims(gray_image, axis=0)  # Add batch dimension
+        gray_image = cv2.resize(gray_image, cfg.DatasetConfig.image_shape, interpolation=cv2.INTER_AREA)
+        rgb_image = np.stack([gray_image, gray_image, gray_image], axis=0)  # Add channel dimension
         in_image = torch.tensor(rgb_image, dtype=torch.float32)
 
         # Normalize the image
@@ -95,9 +96,15 @@ def test():
         in_image = transform(in_image)
 
         # Move the image to the device and evaluate
-        in_image = in_image.to(cfg.device)
+        in_image = in_image.unsqueeze(0).to(cfg.device)
         with torch.no_grad():
-            predictions = model(in_image)
+            log_prob = model(in_image)
+
+            probabilities = torch.exp(log_prob)
+            pred_prob, pred_class = torch.max(probabilities, dim=1)
+
+            print(f"The person is: {class_names[pred_class]} wth confidence: {pred_prob * 100}%")
+
     else:
         data_processor = DataProcessing(cfg)
         test_transform = data_processor.get_test_transform(mean=mean, std=std)
@@ -116,33 +123,33 @@ def test():
                 # Predicted log probabilities from the model
                 predictions = model(input_data)
 
-    # Compute KL-Divergence score
-    kl_div = kl_divergence(predictions=predictions, targets=targets)
+                # Compute KL-Divergence score
+                kl_div = kl_divergence(predictions=predictions, targets=targets)
 
-    # Compute accuracy score, precision, F1, recall scores
-    accuracy = compute_accuracy(predictions=predictions, targets=targets)
-    precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
+                # Compute accuracy score, precision, F1, recall scores
+                accuracy = compute_accuracy(predictions=predictions, targets=targets)
+                precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
 
-    # Compute confusion matrix
-    conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
-    plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
+                # Compute confusion matrix
+                conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
+                plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
 
-    # Print evaluation metrics
-    print("Evaluation Metrics:")
-    print(f"KL Divergence: {kl_div:.5f}\n")
-    print(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
-    print(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}")
-    for i, class_name in enumerate(class_names):
-        print(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}")
+                # Print evaluation metrics
+                print("Evaluation Metrics:")
+                print(f"KL Divergence: {kl_div:.5f}\n")
+                print(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
+                print(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}")
+                for i, class_name in enumerate(class_names):
+                    print(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}")
 
-    # Dump the evaluation metrics into a txt file
-    dump_into_file(kl_div=kl_div,
-                   accuracy=accuracy,
-                   precision=precision,
-                   recall=recall,
-                   f1=f1,
-                   class_names=class_names,
-                   file_path=r'evaluation_metrics.txt')
+                # Dump the evaluation metrics into a txt file
+                dump_into_file(kl_div=kl_div,
+                               accuracy=accuracy,
+                               precision=precision,
+                               recall=recall,
+                               f1=f1,
+                               class_names=class_names,
+                               file_path=r'evaluation_metrics.txt')
 
 
 if __name__ == '__main__':

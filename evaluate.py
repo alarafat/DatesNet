@@ -84,26 +84,43 @@ def test():
     if cfg.TestConfig.use_single_image:
         assert len(cfg.TestConfig.class_names) != 0, "You need to use the class names if you want to use a single image"
         class_names = cfg.TestConfig.class_names
-        gray_image = cv2.imread(cfg.TestConfig.image_file_name, cv2.IMREAD_GRAYSCALE)
 
-        # gray_image_ = np.expand_dims(gray_image, axis=0)  # Add batch dimension
-        gray_image = cv2.resize(gray_image, cfg.DatasetConfig.image_shape, interpolation=cv2.INTER_AREA)
-        rgb_image = np.stack([gray_image, gray_image, gray_image], axis=0)  # Add channel dimension
-        in_image = torch.tensor(rgb_image, dtype=torch.float32)
+        in_images = list()
+        for img_file_name in cfg.TestConfig.image_file_name:
+            gray_image = cv2.imread(img_file_name, cv2.IMREAD_GRAYSCALE)
+            # ============= Pre-processing steps kick-in ==============
+            # Resize the image to input image size (48 X 48)
+            gray_image = cv2.resize(gray_image, cfg.DatasetConfig.image_shape, interpolation=cv2.INTER_AREA)
+            # Do histogram equalization over the iage
+            eq_image = cv2.equalizeHist(gray_image)
+            # Normalize the image into [0, 1]
+            normed_image = cv2.normalize(eq_image, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+            # Convert 1-channel image to 3-channels image
+            rgb_image = np.stack([normed_image, normed_image, normed_image], axis=0)  # Add channel dimension
+            in_images.append(rgb_image)
+
+        in_images_torch = torch.tensor(in_images, dtype=torch.float32)
 
         # Normalize the image
         transform = v2.Normalize(mean=mean, std=std)
-        in_image = transform(in_image)
+        in_images_torch = transform(in_images_torch)
 
         # Move the image to the device and evaluate
-        in_image = in_image.unsqueeze(0).to(cfg.device)
+        in_images_torch = in_images_torch.to(cfg.device)
         with torch.no_grad():
-            log_prob = model(in_image)
+            log_prob = model(in_images_torch)
 
             probabilities = torch.exp(log_prob)
             pred_prob, pred_class = torch.max(probabilities, dim=1)
 
-            print(f"The person is: {class_names[pred_class]} wth confidence: {pred_prob * 100}%")
+            fig = plt.figure(figsize=(14, 7))
+            for idx, in_image in enumerate(in_images_torch):
+                ax = fig.add_subplot(2, 4, idx + 1, xticks=[], yticks=[])
+                plt.imshow(in_images[idx].transpose(1, 2, 0))
+                # Adding emotion text
+                ax.text(0.5, -0.1, class_names[pred_class[idx]], ha='center', va='top', transform=ax.transAxes, fontsize=10, color='red')
+
+            plt.show(block=True)
 
     else:
         data_processor = DataProcessing(cfg)

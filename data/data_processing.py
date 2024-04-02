@@ -27,6 +27,7 @@ class DataProcessing(object):
         get_test_transform(mean=None, std=None): Returns a torchvision.transforms.Compose object for
             test data augmentation, identical to the validation augmentation.
     """
+
     def __init__(self, cfg):
         self.cfg = cfg
 
@@ -73,12 +74,18 @@ class DataProcessing(object):
             """
             eq_image = cv2.equalizeHist(in_image)
             out_image = cv2.normalize(eq_image, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+
+            # clahe_image = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            # eq_image = clahe_image.apply(in_image)
+            # out_image = cv2.normalize(eq_image, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+
             return torch.from_numpy(out_image).float().unsqueeze(0)
 
     class Gray2RGB(object):
         """"
         Converts 1-channel image to 3-channels image
         """
+
         def __call__(self, in_image):
             return in_image.expand(3, -1, -1)
 
@@ -92,13 +99,14 @@ class DataProcessing(object):
         mean = mean if mean is not None else self.mean
         std = std if std is not None else self.std
         augmentation_transform = v2.Compose([
-            self.HistogramEqualization(),   # Histogram equalization
-            self.Gray2RGB(),    # Convert to a 3-channels image
+            self.HistogramEqualization(),  # Histogram equalization
+            self.Gray2RGB(),  # Convert to a 3-channels image
             v2.RandomHorizontalFlip(p=0.5),  # Flips the image horizontally with probability of 0.5
             v2.RandomResizedCrop(size=(48, 48), scale=(0.8, 1.0), ratio=(0.9, 1.1), interpolation=v2.InterpolationMode.BILINEAR),
             v2.RandomRotation(degrees=15),  # Rotates the image by up to 15 degrees
             v2.RandomAdjustSharpness(sharpness_factor=2, p=0.5),  # Randomly adjusts sharpness
             v2.ColorJitter(brightness=0.2, contrast=0.2),  # Randomly changes brightness and contrast
+            # v2.RandomAffine(degrees=0, translate=(0.2, 0.2)),
             v2.ToTensor(),
             v2.Normalize(mean=mean, std=std),  # Normalize tensors
         ])

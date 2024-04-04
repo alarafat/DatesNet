@@ -174,7 +174,7 @@ def main():
     train_dataset = FERPlusDatasetLoader(cfg=cfg, dataset_name='train', transforms=aug_transforms)
     train_dataset_loader = DataLoader(train_dataset,
                                       batch_size=cfg.TrainConfig.batch_size,
-                                      shuffle=cfg.TrainConfig.shuffle,
+                                      shuffle=cfg.TrainConfig.data_shuffle,
                                       num_workers=cfg.TrainConfig.workers,
                                       pin_memory=cfg.TrainConfig.pin_memory)
 
@@ -183,7 +183,7 @@ def main():
     validation_dataset = FERPlusDatasetLoader(cfg=cfg, dataset_name='val', transforms=val_aug_transform)
     validation_dataset_loader = DataLoader(validation_dataset,
                                            batch_size=cfg.ValidConfig.batch_size,
-                                           shuffle=cfg.ValidConfig.shuffle,
+                                           shuffle=cfg.ValidConfig.data_shuffle,
                                            num_workers=cfg.ValidConfig.workers,
                                            pin_memory=cfg.ValidConfig.pin_memory)
 

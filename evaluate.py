@@ -16,6 +16,8 @@ from lib.datesnet import DatesNet
 from config.datesnet_config import Config as cfg
 from data.data_processing import DataProcessing
 from data.dataset_loader import FERPlusDatasetLoader
+
+from utils.dnn_utils import EvaluationMetric
 from utils.evaluation_metrics import kl_divergence, compute_accuracy, compute_metrics, compute_confusion_matrix
 
 
@@ -81,6 +83,10 @@ def test():
     mean = list([0.5015, 0.5015, 0.5015])
     std = list([0.2918, 0.2918, 0.2918])
 
+    # Init few variables for metrics calculation
+    losses = EvaluationMetric()
+    accuracy = EvaluationMetric()
+
     if cfg.TestConfig.use_single_image:
         assert len(cfg.TestConfig.class_names) != 0, "You need to use the class names if you want to use a single image"
         class_names = cfg.TestConfig.class_names
@@ -126,47 +132,55 @@ def test():
         data_processor = DataProcessing(cfg)
         test_transform = data_processor.get_test_transform(mean=mean, std=std)
         test_dataset = FERPlusDatasetLoader(cfg=cfg, dataset_name='test', transforms=test_transform)
-        test_dataset_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, num_workers=16, pin_memory=True)
-        class_names = test_dataset.get_labels_name()
+        batch_size = cfg.TestConfig.batch_size if cfg.TestConfig.batch_size > 0 else len(test_dataset)
+        test_dataset_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=16, pin_memory=True)
+        # class_names = test_dataset.get_labels_name()
+        class_names = ['anger', 'contempt', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
         # ========== Evaluate the model on the test dataset ============
         with torch.no_grad():
-            for (input_data, targets) in tqdm(test_dataset_loader, total=len(test_dataset_loader)):
+            predictions = list()
+            targets = list()
+            for (input_data, target) in tqdm(test_dataset_loader, total=len(test_dataset_loader)):
                 if cfg.device == 'cuda':
                     model.to(cfg.device)
                     input_data = input_data.cuda(non_blocking=True)
-                    targets = targets.cuda(non_blocking=True)
+                    targets.append(target.cuda(non_blocking=True))
 
                 # Predicted log probabilities from the model
-                predictions = model(input_data)
+                predictions.append(model(input_data))
 
-                # Compute KL-Divergence score
-                kl_div = kl_divergence(predictions=predictions, targets=targets)
+            # Concat all the predictions and targets
+            predictions = torch.cat(predictions, dim=0)
+            targets = torch.cat(targets, dim=0)
 
-                # Compute accuracy score, precision, F1, recall scores
-                accuracy = compute_accuracy(predictions=predictions, targets=targets)
-                precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
+            # Compute KL-Divergence score
+            kl_div = kl_divergence(predictions=predictions, targets=targets)
 
-                # Compute confusion matrix
-                conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
-                plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
+            # Compute accuracy score, precision, F1, recall scores
+            accuracy = compute_accuracy(predictions=predictions, targets=targets)
+            precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
 
-                # Print evaluation metrics
-                print("Evaluation Metrics:")
-                print(f"KL Divergence: {kl_div:.5f}\n")
-                print(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
-                print(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}")
-                for i, class_name in enumerate(class_names):
-                    print(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}")
+            # Compute confusion matrix
+            conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
+            plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
 
-                # Dump the evaluation metrics into a txt file
-                dump_into_file(kl_div=kl_div,
-                               accuracy=accuracy,
-                               precision=precision,
-                               recall=recall,
-                               f1=f1,
-                               class_names=class_names,
-                               file_path=r'evaluation_metrics.txt')
+            # Print evaluation metrics
+            print("Evaluation Metrics:")
+            print(f"KL Divergence: {kl_div:.5f}\n")
+            print(f"Overall Accuracy: {accuracy * 100:.5f}%\n\n")
+            print(f"{'Class':<20}{'Precision':<10}{'Recall':<10}{'F1-Score':<10}")
+            for i, class_name in enumerate(class_names):
+                print(f"{class_name:<20}{precision[i]:<10.5f}{recall[i]:<10.5f}{f1[i]:<10.5f}")
+
+            # Dump the evaluation metrics into a txt file
+            dump_into_file(kl_div=kl_div,
+                           accuracy=accuracy,
+                           precision=precision,
+                           recall=recall,
+                           f1=f1,
+                           class_names=class_names,
+                           file_path=r'evaluation_metrics.txt')
 
 
 if __name__ == '__main__':

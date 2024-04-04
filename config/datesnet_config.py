@@ -12,31 +12,25 @@ class Config:
         dataset_dir: str = r'D:\dataset\face\FER+'
         image_shape = (48, 48)
         # votes_count = 10
-        do_augment_data = True
-
-        shuffle = True
-        flip = True
-        scale_factor = 0.25
-        rotation_factor = 30
 
     class ModelConfig:
         in_channels: int = 3
         n_classes: int = 8      # number of output classes (neutral, happiness, surprise, sadness, anger, disgust, fear, contempt, unknown, NF[Not face])
-        n_groups_gm: int = 16
+        n_groups_gn: int = 16
         start_hidden_channels: int = 64,
         n_hidden_expansion: int = 3
 
     class TrainConfig:
+        batch_size: int = 64
+        data_shuffle: bool = True
         number_epochs: int = 100
-        resume_training: bool = False
+        resume_training: bool = True
 
         # ========== CUDA training parameters ===========
         is_cudnn_enabled: bool = True
         is_cudnn_benchmark_enabled: bool = True
         is_cudnn_deterministic: bool = False
         gpus: tuple = (0,)
-        batch_size: int = 64
-        shuffle: bool = True
         workers: int = 16
         pin_memory: bool = True
 
@@ -59,12 +53,13 @@ class Config:
 
     class ValidConfig:
         batch_size: int = 16
-        shuffle: bool = False
+        data_shuffle: bool = False
         workers: int = 16
         pin_memory: bool = True
 
     class TestConfig:
-        checkpoint_name: str = r'checkpoints/datesnet_model_unet.pth'
-        use_single_image: bool = True
+        checkpoint_name: str = r'checkpoints/datesnet_model.pth'
+        batch_size = 512
+        use_single_image: bool = False
         image_file_name: list = list([r'demo/image_1.png', r'demo/image_2.png', r'demo/image_3.png'])
         class_names: list = list(['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt'])

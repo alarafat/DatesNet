@@ -22,7 +22,8 @@ class FERPlusDatasetLoader(data.Dataset):
         self.dataset_name = dataset_name_pairs[dataset_name]
         self.fer = pd.read_csv(cfg.DatasetConfig.dataset_dir + r'\fer2013.csv')
         self.fer_plus = pd.read_csv(cfg.DatasetConfig.dataset_dir + r'\fer2013new.csv')
-        self.classes_name = self.fer_plus.columns[2: 2 + cfg.ModelConfig.n_classes].tolist()
+        self.classes_name = {idx: text for idx, text in enumerate(self.fer_plus.columns[2: 2 + cfg.ModelConfig.n_classes].tolist())}
+        self.classes_idx = {text: idx for idx, text in enumerate(self.fer_plus.columns[2: 2 + cfg.ModelConfig.n_classes].tolist())}
         self.transforms = transforms
 
         self.data, self.labels = self.load_data()
@@ -43,7 +44,7 @@ class FERPlusDatasetLoader(data.Dataset):
             if pd.isna(image_name) or self.fer_plus.iloc[idx][2: 2 + self.cfg.ModelConfig.n_classes].sum() == 0:
                 continue
 
-            encoded_label = self.encode_labels(np.array([self.fer_plus.loc[idx, each_class] for each_class in self.classes_name]))
+            encoded_label = self.encode_labels(np.array([self.fer_plus.loc[idx, each_class] for each_class in self.classes_name.values()]))
             if encoded_label.size:
                 images.append(np.fromstring(image_data, dtype=np.uint8, sep=' ').reshape(self.image_shape))
                 labels.append(encoded_label)
@@ -108,3 +109,5 @@ class FERPlusDatasetLoader(data.Dataset):
             image = self.transforms(image)
 
         return image.to(), label
+
+

@@ -84,14 +84,15 @@ class DatesNet(nn.Module):
             ),
 
             nn.Sequential(
-                ResidualBlock(in_channels=decoder_in_channels[2], out_channels=hidden_channels[0]),  # (b, 128, h/4, w/4) -> (b, 64, h/4, w/4)
-                # ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
-                ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h/2, w/2) -> (b, 64, h/2, w/2)
+                ResidualBlock(in_channels=decoder_in_channels[2], out_channels=hidden_channels[0]),  # (b, 128, h, w) -> (b, 64, h, w)
+                # ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h, w) -> (b, 64, h, w)
+                ResidualBlock(in_channels=hidden_channels[0], out_channels=hidden_channels[0]),  # (b, 64, h, w) -> (b, 64, h, w)
             ),
         ])
 
         self.head = nn.Sequential(
             nn.Conv2d(in_channels=hidden_channels[0], out_channels=cfg.ModelConfig.n_classes, kernel_size=3, padding=1),
+            AttentionBlock(cfg.ModelConfig.n_classes),
             nn.Flatten(),
             nn.Linear(in_features=cfg.DatasetConfig.image_shape[0] * cfg.DatasetConfig.image_shape[1] * cfg.ModelConfig.n_classes,
                       out_features=cfg.ModelConfig.n_classes, bias=False),

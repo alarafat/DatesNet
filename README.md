@@ -7,11 +7,11 @@ Implementation of Facial Emotion Recognition model trained and evaluated on FER+
 **Link to FER+ dataset:** [FER+](https://github.com/microsoft/FERPlus/tree/master)
 
 ## Comparison with BaseLine and PAtt-Lite model
-| Architecture             | Model File                                                     | Confusion Matrix                                         |
-|--------------------------|----------------------------------------------------------|----------------------------------------------------------|
-| DatesNet (trained on FER+) | [datesnet_model_datesnet.pth](./checkpoints/datesnet_model_datesnet.pth)            | ![ref conf mat](./output/confusion_matrix_datesnet_8cls.png) |
- | PAtt-Lite               | [link](https://github.com/JLREx/PAtt-Lite)               | ![sota_cm](.output/patt_lite.png)                        |
-  | Baseline Model on FER+  | [link](https://github.com/microsoft/FERPlus/tree/master) | ![ref conf mat](./output/ref_conf_mat.png)               | 
+| Architecture             | Model File                                                     | Confusion Matrix                                                                  |
+|--------------------------|----------------------------------------------------------|-----------------------------------------------------------------------------------|
+| DatesNet (trained on FER+) | [datesnet_model_datesnet.pth](./checkpoints/datesnet_model_datesnet.pth)            | <img src ="./output/confusion_matrix_datesnet_8cls.png" width="500" height="440"> |
+| PAtt-Lite               | [link](https://github.com/JLREx/PAtt-Lite)               | ![sota_cm](./output/patt_lite.png)                                                |
+  | Baseline Model on FER+  | [link](https://github.com/microsoft/FERPlus/tree/master) | ![ref conf mat](./output/ref_conf_mat.png)                                        | 
 
 ## Training
 The training code needs the proper configuration set in the ***config/datesnet_config.py***. The 

@@ -9,7 +9,7 @@ Implementation of Facial Emotion Recognition model trained and evaluated on FER+
 ## Comparison with BaseLine and PAtt-Lite model
 | Architecture             | Model File                                                     | Confusion Matrix                                                                  |
 |--------------------------|----------------------------------------------------------|-----------------------------------------------------------------------------------|
-| DatesNet (trained on FER+) | [datesnet_model_datesnet.pth](./checkpoints/datesnet_model_datesnet.pth)            | <img src ="./output/confusion_matrix_datesnet_8cls.png" width="600" height="550"> |
+| DatesNet (trained on FER+) | [datesnet_model_datesnet.pth](./checkpoints/datesnet_model_datesnet.pth)            | <img src ="./output/confusion_matrix_datesnet_8cls.png"> |
 | PAtt-Lite               | [link](https://github.com/JLREx/PAtt-Lite)               | ![sota_cm](./output/patt_lite.png)                                                |
 | Baseline Model on FER+  | [link](https://github.com/microsoft/FERPlus/tree/master) | ![ref conf mat](./output/ref_conf_mat.png)                                        | 
 

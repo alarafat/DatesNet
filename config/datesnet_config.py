@@ -58,8 +58,9 @@ class Config:
         pin_memory: bool = True
 
     class TestConfig:
-        checkpoint_name: str = r'checkpoints/datesnet_model.pth'
+        checkpoint_name: str = r'checkpoints/datesnet_model_datesnet.pth'
         batch_size = 512
-        use_single_image: bool = False
+        use_image: bool = False
         image_file_name: list = list([r'demo/image_1.png', r'demo/image_2.png', r'demo/image_3.png'])
         class_names: list = list(['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt'])
+        # class_id: list = list(['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt'])

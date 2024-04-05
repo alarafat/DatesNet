@@ -16,6 +16,7 @@ from lib.datesnet import DatesNet
 from config.datesnet_config import Config as cfg
 from data.data_processing import DataProcessing
 from data.dataset_loader import FERPlusDatasetLoader
+from lib.face_det.detect_face_cv import FaceDetector
 
 from utils.dnn_utils import EvaluationMetric
 from utils.evaluation_metrics import kl_divergence, compute_accuracy, compute_metrics, compute_confusion_matrix
@@ -63,6 +64,7 @@ def dump_into_file(kl_div, accuracy, precision, recall, f1, class_names, file_pa
 def test():
     # Load the model
     model = DatesNet(cfg=cfg)
+    face_detector = FaceDetector()
 
     # ============== Load the model weights ================
     if not os.path.exists(cfg.TestConfig.checkpoint_name):
@@ -87,18 +89,21 @@ def test():
     losses = EvaluationMetric()
     accuracy = EvaluationMetric()
 
-    if cfg.TestConfig.use_single_image:
+    if cfg.TestConfig.use_image:
         assert len(cfg.TestConfig.class_names) != 0, "You need to use the class names if you want to use a single image"
         class_names = cfg.TestConfig.class_names
 
         in_images = list()
         for img_file_name in cfg.TestConfig.image_file_name:
-            gray_image = cv2.imread(img_file_name, cv2.IMREAD_GRAYSCALE)
+            rgb_image = cv2.imread(img_file_name, cv2.IMREAD_UNCHANGED)
+            gray_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2GRAY)
+            in_image = gray_image
+            # in_image = face_detector.get_aligned_face(gray_image)
             # ============= Pre-processing steps kick-in ==============
             # Resize the image to input image size (48 X 48)
-            gray_image = cv2.resize(gray_image, cfg.DatasetConfig.image_shape, interpolation=cv2.INTER_AREA)
+            in_image = cv2.resize(in_image, cfg.DatasetConfig.image_shape, interpolation=cv2.INTER_AREA)
             # Do histogram equalization over the iage
-            eq_image = cv2.equalizeHist(gray_image)
+            eq_image = cv2.equalizeHist(in_image)
             # Normalize the image into [0, 1]
             normed_image = cv2.normalize(eq_image, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
             # Convert 1-channel image to 3-channels image
@@ -135,7 +140,8 @@ def test():
         batch_size = cfg.TestConfig.batch_size if cfg.TestConfig.batch_size > 0 else len(test_dataset)
         test_dataset_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=16, pin_memory=True)
         # class_names = test_dataset.get_labels_name()
-        class_names = ['anger', 'contempt', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+        class_ids = np.argsort(cfg.TestConfig.class_names)
+        class_names = np.sort(cfg.TestConfig.class_names)
 
         # ========== Evaluate the model on the test dataset ============
         with torch.no_grad():
@@ -162,7 +168,7 @@ def test():
             precision, recall, f1 = compute_metrics(predictions=predictions, targets=targets)
 
             # Compute confusion matrix
-            conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets)
+            conf_mat = compute_confusion_matrix(predictions=predictions, targets=targets, labels=class_ids)
             plot_confusion_matrix(confusion_mat=conf_mat, class_names=class_names)
 
             # Print evaluation metrics

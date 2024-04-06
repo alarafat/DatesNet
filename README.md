@@ -1,6 +1,8 @@
 # DatesNet: Facial Emotion Recognition 
 Implementation of Facial Emotion Recognition model trained and evaluated on FER+ dataset. The DatesNet is a UNet with Residual blocks ending with a Self-Attention block.
 
+**Technical Report:** [confluence report](https://alarafatruet.atlassian.net/wiki/external/NGU0MjRhNjBlZGY5NGE0YjhjMTc2MWI2MzViZDhiMzI)
+
 ## Model Architecture
 
 
